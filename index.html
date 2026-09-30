@@ -409,6 +409,11 @@ ul{margin:0;padding:0;list-style:none}
 .field input::placeholder,.field textarea::placeholder{color:var(--ink-50)}
 .form__submit{display:flex;flex-direction:column;gap:1.6rem;width:100%;align-items:flex-start}
 .form__consent{font-size:1.3rem;line-height:1.5;color:var(--ink-50)}
+.form__error{display:none;font-size:1.4rem;line-height:1.5;color:var(--accent);width:100%}
+.form__error.is-visible{display:block}
+.form-success-message{width:100%;display:flex;flex-direction:column;gap:1.2rem}
+.form-success-message h3{font-size:3.2rem;line-height:1.1;font-weight:600;color:var(--ink)}
+.form-success-message p{font-size:1.6rem;line-height:1.5;color:var(--ink-70)}
 
 /* ---------- faq ---------- */
 .faq{display:flex;flex-direction:column;gap:4.5rem}
@@ -1169,6 +1174,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
 
       <div class="form__submit">
+        <div id="form-error" class="form__error" role="alert" aria-live="polite"></div>
         <button class="btn btn-primary" type="submit">Claim the bonus session</button>
         <p class="form__consent">We&rsquo;ll text you back to confirm a time. No marketing texts, and your details are never shared.</p>
       </div>
@@ -1388,21 +1394,117 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   });
 
   /* -------------------------------------------------------------------
-     Form: no backend on a static page, so give honest feedback
+     Form: posts the lead to the AEVA contacts API
      ------------------------------------------------------------------- */
   var form = document.querySelector(".form");
   if (form){
+    var submitBtn = form.querySelector('button[type="submit"]');
+    var errEl = form.querySelector("#form-error");
+
+    function showError(msg){
+      if (!errEl) return;
+      errEl.textContent = msg;
+      errEl.classList.toggle("is-visible", !!msg);
+    }
+    function val(sel){
+      var el = form.querySelector(sel);
+      return el && el.value ? el.value.trim() : "";
+    }
+
     form.addEventListener("submit", function(e){
       e.preventDefault();
-      var btn = form.querySelector('button[type="submit"]');
-      if (!btn || btn.disabled) return;
-      var label = btn.textContent;
-      btn.disabled = true;
-      btn.textContent = "Sending…";
-      window.setTimeout(function(){
-        btn.textContent = "✓ Thanks, we'll be in touch";
-        window.setTimeout(function(){ btn.textContent = label; btn.disabled = false; }, 2600);
-      }, 600);
+      if (!submitBtn || submitBtn.disabled) return;
+      showError("");
+      submitBtn.disabled = true;
+      var label = submitBtn.textContent;
+      submitBtn.textContent = "Sending…";
+
+      function fail(msg){
+        showError(msg);
+        submitBtn.disabled = false;
+        submitBtn.textContent = label;
+      }
+
+      var first_name = val("#f-first");
+      var last_name  = val("#f-last");
+      var email      = val("#f-email");
+      var phoneRaw   = val("#f-phone");
+      var message    = val("#f-goal");
+      var checkbox   = form.querySelector("#newsletter") && form.querySelector("#newsletter").checked ? "on" : "";
+
+      if (!first_name || !last_name){
+        fail("Please enter your first and last name.");
+        return;
+      }
+
+      var emailRe = /^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$/;
+      if (!emailRe.test(email)){
+        fail("Please enter a valid email address.");
+        return;
+      }
+
+      // Accept "(561) 000-0000", "561-000-0000", "+1 561…" etc. and normalise to 10 digits
+      var phone = phoneRaw.replace(/\D/g, "");
+      if (phone.length === 11 && phone.charAt(0) === "1") phone = phone.slice(1);
+      if (!/^[0-9]{10}$/.test(phone)){
+        fail("Please enter a 10-digit US phone number.");
+        return;
+      }
+
+      var fd = new FormData();
+      fd.append("first_name", first_name);
+      fd.append("last_name", last_name);
+      fd.append("phone", "+1" + phone);
+      fd.append("email", email);
+      fd.append("checkbox", checkbox);
+      fd.append("organization", "b3df9b93-dcf3-4ad3-86a7-cb50946514ed");
+      fd.append("form", "567");
+      fd.append("message", message);
+      fd.append("form_location", window.location.href);
+
+      // Detect ad tracking params from URL
+      var urlParams = new URLSearchParams(window.location.search);
+      var trackingMap = {
+        gclid: "google",
+        wbraid: "google",
+        gbraid: "google",
+        fbclid: "meta",
+        ttclid: "tiktok"
+      };
+      var trackingParam = "";
+      var adSource = "other";
+      for (var param in trackingMap){
+        var v = urlParams.get(param);
+        if (v){
+          trackingParam = v;
+          adSource = trackingMap[param];
+          break;
+        }
+      }
+      fd.append("tracking_param", trackingParam);
+      fd.append("ad_source", adSource);
+
+      fetch("https://api.aevadigital.com/api/v1/contacts/add_contact_from_form/", {
+        method: "POST",
+        body: fd
+      }).then(function(res){
+        if (!res.ok){
+          return res.text().catch(function(){ return res.statusText; }).then(function(txt){
+            throw new Error(txt || "Server error");
+          });
+        }
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({ "event": "form-success" });
+
+        form.style.display = "none";
+        var thankYou = document.createElement("div");
+        thankYou.className = "form-success-message";
+        thankYou.innerHTML = "<h3>Thank You!</h3><p>Your consultation request has been received. We’ll be in touch shortly.</p>";
+        form.parentNode.insertBefore(thankYou, form.nextSibling);
+      }).catch(function(err){
+        console.error(err);
+        fail("Submission failed. Please try again.");
+      });
     });
   }
 
