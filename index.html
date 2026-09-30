@@ -408,7 +408,9 @@ ul{margin:0;padding:0;list-style:none}
 .field textarea{height:9.6rem;padding:1.4rem 1.6rem;resize:vertical}
 .field input::placeholder,.field textarea::placeholder{color:var(--ink-50)}
 .form__submit{display:flex;flex-direction:column;gap:1.6rem;width:100%;align-items:flex-start}
-.form__consent{font-size:1.3rem;line-height:1.5;color:var(--ink-50)}
+.form__consent-row{display:flex;align-items:flex-start;gap:1.2rem;width:100%}
+.form__checkbox{flex:none;width:1.8rem;height:1.8rem;margin:.2rem 0 0;accent-color:var(--accent);cursor:pointer}
+.form__consent{font-size:1.3rem;line-height:1.5;color:var(--ink-50);cursor:pointer}
 .form__error{display:none;font-size:1.4rem;line-height:1.5;color:var(--accent);width:100%}
 .form__error.is-visible{display:block}
 .form-success-message{width:100%;display:flex;flex-direction:column;gap:1.2rem}
@@ -1174,9 +1176,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </div>
 
       <div class="form__submit">
+        <div class="form__consent-row">
+          <input id="newsletter" name="newsletter" type="checkbox" class="form__checkbox" required>
+          <label for="newsletter" class="form__consent">By submitting this form, you agree to receive marketing text messages, alerts, and notifications from Eternal Wellness. Message frequency may vary. Rates may be applied. You can opt out at any time by replying STOP.</label>
+        </div>
         <div id="form-error" class="form__error" role="alert" aria-live="polite"></div>
         <button class="btn btn-primary" type="submit">Claim the bonus session</button>
-        <p class="form__consent">We&rsquo;ll text you back to confirm a time. No marketing texts, and your details are never shared.</p>
       </div>
     </form>
   </div>
@@ -1448,6 +1453,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       if (phone.length === 11 && phone.charAt(0) === "1") phone = phone.slice(1);
       if (!/^[0-9]{10}$/.test(phone)){
         fail("Please enter a 10-digit US phone number.");
+        return;
+      }
+
+      if (!checkbox){
+        fail("Please agree to receive text messages to continue.");
         return;
       }
 
