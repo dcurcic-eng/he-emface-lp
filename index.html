@@ -1177,7 +1177,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
       <div class="form__submit">
         <div class="form__consent-row">
-          <input id="newsletter" name="newsletter" type="checkbox" class="form__checkbox" required>
+          <input id="newsletter" name="newsletter" type="checkbox" class="form__checkbox">
           <label for="newsletter" class="form__consent">By submitting this form, you agree to receive marketing text messages, alerts, and notifications from Eternal Wellness. Message frequency may vary. Rates may be applied. You can opt out at any time by replying STOP.</label>
         </div>
         <div id="form-error" class="form__error" role="alert" aria-live="polite"></div>
@@ -1453,11 +1453,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       if (phone.length === 11 && phone.charAt(0) === "1") phone = phone.slice(1);
       if (!/^[0-9]{10}$/.test(phone)){
         fail("Please enter a 10-digit US phone number.");
-        return;
-      }
-
-      if (!checkbox){
-        fail("Please agree to receive text messages to continue.");
         return;
       }
 
